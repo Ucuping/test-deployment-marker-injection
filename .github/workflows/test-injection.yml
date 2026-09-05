@@ -12,8 +12,12 @@ jobs:
   mark-deployment:
     runs-on: ubuntu-latest
     steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
       - name: Mark deployment
         uses: newrelic/deployment-marker-action@v2.6.2
+        continue-on-error: true
         with:
           apiKey: "NRAK-FAKEKEY000000000000TESTONLY"
           commandType: changeTrackingCreateEvent
@@ -22,3 +26,17 @@ jobs:
           entitySearch: "domain = 'APM' AND name = 'TestApp'"
           version: "${{ github.event.inputs.deploy_version }}"
           description: "Deploy ${{ github.event.inputs.deploy_version }}"
+
+      - name: Check injection evidence
+        run: |
+          echo "=== Injection Evidence Check ==="
+          if [ -f "$GITHUB_WORKSPACE/injection_proof.txt" ]; then
+            echo "INJECTION CONFIRMED"
+            echo "Content: $(cat $GITHUB_WORKSPACE/injection_proof.txt)"
+          else
+            echo "No injection evidence file found"
+          fi
+          echo "=== Workspace listing ==="
+          ls -la "$GITHUB_WORKSPACE"/injection* 2>/dev/null || echo "No injection files in workspace"
+          echo "=== Runner temp listing ==="
+          ls -la /home/runner/work/_temp/injection* 2>/dev/null || echo "No injection files in runner temp"
