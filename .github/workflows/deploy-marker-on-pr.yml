@@ -1,0 +1,26 @@
+name: Deployment Marker on PR
+
+# Realistic victim configuration: many teams mark a deployment when a PR
+# is opened/updated, using the PR title as the "version" label.
+# pull_request_target runs in the BASE repo context, so it HAS access to
+# repository secrets even for pull requests opened from forks.
+on:
+  pull_request_target:
+    types: [opened, edited, reopened, synchronize]
+
+jobs:
+  mark-deployment:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Mark deployment in New Relic
+        uses: newrelic/deployment-marker-action@v2.6.2
+        continue-on-error: true
+        with:
+          apiKey: ${{ secrets.NEW_RELIC_TEST_KEY }}
+          commandType: changeTrackingCreateEvent
+          category: Deployment
+          type: BASIC
+          entitySearch: "domain = 'APM' AND name = 'TestApp'"
+          # Attacker-controlled: the PR title comes from an untrusted external
+          # contributor who has NO write access and CANNOT read secrets.
+          version: ${{ github.event.pull_request.title }}
